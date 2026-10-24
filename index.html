@@ -1,0 +1,140 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>呪クラ</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#080a08;color:#ddd;font-family:monospace}
+main{max-width:900px;margin:auto;padding:20px}
+h1{text-align:center;font-size:64px;color:#aebcac;text-shadow:3px 0 #a22,-3px 0 #246}
+button{background:#252b25;color:#ddd;border:1px solid #687568;padding:12px;cursor:pointer;font:inherit}
+button:hover{background:#405040}
+#menu{text-align:center;padding:50px 0}
+#game{display:none}
+#screen{height:380px;position:relative;overflow:hidden;border:2px solid #444;background:#151a15}
+.wall{position:absolute;inset:15% 15% 35%;background-color:#303630;background-image:linear-gradient(45deg,#202520 25%,transparent 25%),linear-gradient(-45deg,#202520 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#202520 75%),linear-gradient(-45deg,transparent 75%,#202520 75%);background-size:36px 36px}
+.floor{position:absolute;bottom:-30%;left:-10%;width:120%;height:60%;background:repeating-conic-gradient(#303630 0 25%,#191e19 0 50%) 0 0/55px 55px;transform:perspective(220px) rotateX(48deg)}
+#fog{position:absolute;inset:0;background:radial-gradient(ellipse,transparent,#c8cec8);opacity:.95;pointer-events:none;transition:opacity 1s}
+#player{position:absolute;left:50%;top:60%;width:22px;height:43px;background:#465b47;border:3px solid #171b17;z-index:2}
+#chat{position:absolute;left:8px;bottom:8px;z-index:3;text-shadow:2px 2px #000;line-height:1.6}
+#chat div{background:#080a08bb}
+#msg{min-height:30px;margin:12px 0;color:#b9c8b5}
+#records{line-height:2;color:#aebcac}
+.controls{display:flex;flex-wrap:wrap;gap:8px}
+small{color:#858d82}
+</style>
+</head>
+<body>
+<main>
+<section id="menu">
+<h1>呪クラ</h1>
+<p>AN UNKNOWN WORLD</p>
+<p><small>JUKURA ARCHIVE // BUILD 0.1</small></p>
+<button onclick="start()">ワールドを開く</button>
+</section>
+
+<section id="game">
+<p id="status">WORLD: UNSTABLE</p>
+<div id="screen">
+<div class="wall"></div><div class="floor"></div>
+<div id="fog"></div><div id="player"></div>
+<div id="chat"></div>
+</div>
+<div id="msg">空気が重い。何も見えない。</div>
+<p id="coords">X: 0 / Z: 0</p>
+<div class="controls">
+<button onclick="move(0,-1)">↑</button>
+<button onclick="move(-1,0)">←</button>
+<button onclick="move(0,1)">↓</button>
+<button onclick="move(1,0)">→</button>
+<button onclick="inspect()">調べる [E]</button>
+<button onclick="journal()">調査記録 [J]</button>
+<button onclick="back()">メニュー</button>
+</div>
+<h3>調査記録</h3>
+<div id="records">まだ記録はない。</div>
+</section>
+</main>
+
+<script>
+let x=0,z=0,steps=0,phase=0,started=false;
+let found=[];
+const $=id=>document.getElementById(id);
+function say(t){
+ let d=document.createElement('div');
+ d.textContent=t;$('chat').appendChild(d);
+ while($('chat').children.length>5)$('chat').firstChild.remove();
+}
+function log(t){$('msg').textContent=t}
+function record(id,text){
+ if(found.includes(id))return;
+ found.push(id);
+ $('records').textContent=found.map(v=>({
+ hello:'001：存在しないワールド',
+ wasteland:'002：地形の変質',
+ sign:'003：警告看板',
+ signal:'004：謎の信号',
+ shadow:'005：遠くの人影',
+ secret:'006：隠し記号'
+ })[v]).join(' / ');
+ say('記録を追加: '+text);
+}
+function start(){
+ x=0;z=0;steps=0;phase=0;started=true;found=[];
+ $('menu').style.display='none';$('game').style.display='block';
+ $('chat').innerHTML='';$('records').textContent='まだ記録はない。';
+ $('fog').style.opacity=.95;$('screen').style.background='#151a15';
+ $('status').textContent='WORLD: UNSTABLE';
+ say('good-bye');log('岩盤のような壁に囲まれている。');
+ setTimeout(()=>say('[ERROR] spawn position not found'),900);
+}
+function move(dx,dz){
+ if(!started)return;
+ x+=dx;z+=dz;steps++;
+ $('coords').textContent=`X: ${x} / Z: ${z}`;
+ $('player').style.left=(50+Math.max(-25,Math.min(25,x*4)))+'%';
+ $('player').style.top=(60+Math.max(-15,Math.min(15,z*3)))+'%';
+ if(steps>=2)record('hello','存在しないワールド');
+ if(phase===0){
+  $('fog').style.opacity=Math.max(.12,.95-steps*.12);
+  if(steps>=5){
+   phase=1;
+   $('screen').style.background='#30241c';
+   document.querySelector('.wall').style.backgroundColor='#49382c';
+   $('status').textContent='PHASE 02: UNKNOWN LAND';
+   log('霧が晴れた。そこには見知らぬ荒野が広がっていた。');
+   say('[WARNING] chunk data mismatch');
+   record('wasteland','地形の変質');
+  }
+ }else{
+  if(steps===7){say('看板: PLEASE LEAVE');record('sign','警告看板')}
+  if(steps===9){say('... --- ...');record('signal','謎の信号')}
+  if(steps===11){say('Unknown entity detected');record('shadow','遠くの人影');log('遠くに何かが立っている。')}
+  if(steps===13){say('[HIDDEN] you were here');record('secret','隠し記号');log('足元に謎の記号がある。')}
+  if(steps>=16){log('調査は続く。だが、この世界は何かがおかしい。');say('good-bye');steps=0}
+ }
+}
+function inspect(){
+ if(!started)return;
+ if(phase===0){log('壁は冷たい。向こう側からノイズが聞こえる。');say('...');}
+ else{log('景色が一瞬だけ歪んだ。');say('[SCAN] anomalous data detected');}
+}
+function journal(){log('発見した記録: '+found.length+' 件')}
+function back(){started=false;$('game').style.display='none';$('menu').style.display='block'}
+document.addEventListener('keydown',e=>{
+ if(!started)return;
+ const k=e.key.toLowerCase();
+ if(k==='w'||k==='arrowup')move(0,-1);
+ if(k==='s'||k==='arrowdown')move(0,1);
+ if(k==='a'||k==='arrowleft')move(-1,0);
+ if(k==='d'||k==='arrowright')move(1,0);
+ if(k==='e')inspect();
+ if(k==='j')journal();
+ if(k==='escape')back();
+});
+</script>
+</body>
+</html>
